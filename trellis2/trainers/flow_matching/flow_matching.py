@@ -80,7 +80,7 @@ class FlowMatchingTrainer(BasicTrainer):
             x_t, the noisy version of x_0 under timestep t.
         """
         if noise is None:
-            noise = torch.randn_like(x_0)
+            noise = x_0.replace(torch.randn_like(x_0.feats)) if hasattr(x_0, "feats") else torch.randn_like(x_0)
         assert noise.shape == x_0.shape, "noise must have same shape as x_0"
 
         t = t.view(-1, *[1 for _ in range(len(x_0.shape) - 1)])
@@ -159,7 +159,7 @@ class FlowMatchingTrainer(BasicTrainer):
             a dict with the key "loss" containing a tensor of shape [N].
             may also contain other keys for different terms.
         """
-        noise = torch.randn_like(x_0)
+        noise = x_0.replace(torch.randn_like(x_0.feats)) if hasattr(x_0, "feats") else torch.randn_like(x_0)
         t = self.sample_t(x_0.shape[0]).to(x_0.device).float()
         x_t = self.diffuse(x_0, t, noise=noise)
         cond = self.get_cond(cond, **kwargs)
@@ -168,14 +168,20 @@ class FlowMatchingTrainer(BasicTrainer):
         assert pred.shape == noise.shape == x_0.shape
         target = self.get_v(x_0, noise, t)
         terms = edict()
-        terms["mse"] = F.mse_loss(pred, target)
+        if hasattr(pred, 'feats'):
+            terms["mse"] = F.mse_loss(pred.feats, target.feats)
+        else:
+            terms["mse"] = F.mse_loss(pred, target)
         terms["loss"] = terms["mse"]
 
         # log loss with time bins
-        mse_per_instance = np.array([
-            F.mse_loss(pred[i], target[i]).item()
-            for i in range(x_0.shape[0])
-        ])
+        if hasattr(pred, 'feats'):
+            mse_per_instance = np.array([F.mse_loss(pred.feats, target.feats).item()])
+        else:
+            mse_per_instance = np.array([
+                F.mse_loss(pred[i], target[i]).item()
+                for i in range(x_0.shape[0])
+            ])
         time_bin = np.digitize(t.cpu().numpy(), np.linspace(0, 1, 11)) - 1
         for i in range(10):
             if (time_bin == i).sum() != 0:
@@ -207,7 +213,11 @@ class FlowMatchingTrainer(BasicTrainer):
             batch = min(batch_size, num_samples - i)
             data = next(iter(dataloader))
             data = {k: v[:batch].cuda() if isinstance(v, torch.Tensor) else v[:batch] for k, v in data.items()}
-            noise = torch.randn_like(data['x_0'])
+            # Handle SparseTensor
+            if hasattr(data['x_0'], 'feats'):
+                noise = data['x_0'].replace(torch.randn_like(data['x_0'].feats))
+            else:
+                noise = torch.randn_like(data['x_0'])
             sample_gt.append(data['x_0'])
             cond_vis.append(self.vis_cond(**data))
             del data['x_0']

@@ -279,8 +279,8 @@ class BasicTrainer:
         self.dataloader = DataLoader(
             self.dataset,
             batch_size=self.batch_size_per_gpu,
-            num_workers=int(np.ceil(os.cpu_count() / torch.cuda.device_count())),
-            pin_memory=True,
+            num_workers=4,
+            pin_memory=False,
             drop_last=True,
             persistent_workers=True,
             collate_fn=self.dataset.collate_fn if hasattr(self.dataset, 'collate_fn') else None,
@@ -818,11 +818,11 @@ class BasicTrainer:
         """
         if self.is_master:
             print('\nStarting training...')
-            self.snapshot_dataset(batch_size=self.snapshot_batch_size)
+            pass  # self.snapshot_dataset(batch_size=self.snapshot_batch_size)
         if self.step == 0:
-            self.snapshot(suffix='init', batch_size=self.snapshot_batch_size)
+            pass  # self.snapshot(suffix='init', batch_size=self.snapshot_batch_size)
         else: # resume
-            self.snapshot(suffix=f'resume_step{self.step:07d}', batch_size=self.snapshot_batch_size)
+            pass  # self.snapshot(suffix=f'resume_step{self.step:07d}', batch_size=self.snapshot_batch_size)
 
         time_last_print = 0.0
         time_elapsed = 0.0
@@ -855,7 +855,7 @@ class BasicTrainer:
 
             # Sample images
             if self.step % self.i_sample == 0:
-                self.snapshot()
+                pass  # self.snapshot()
 
             if self.is_master:
                 self.log.append((self.step, {}))
@@ -888,7 +888,7 @@ class BasicTrainer:
             # Check abort
             self.check_abort()
 
-        self.snapshot(suffix='final', batch_size=self.snapshot_batch_size)
+        pass  # self.snapshot(suffix='final', batch_size=self.snapshot_batch_size)
         if self.world_size > 1:
             dist.barrier()
         if self.is_master:

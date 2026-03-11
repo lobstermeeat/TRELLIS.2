@@ -193,6 +193,7 @@ class MultiImageConditionedMixin:
         """
         with dist_utils.local_master_first():
             self.image_cond_model = globals()[self.image_cond_model_config['name']](**self.image_cond_model_config.get('args', {}))
+            self.image_cond_model.cuda()
     
     @torch.no_grad()
     def encode_images(self, images: Union[List[torch.Tensor], List[List[Image.Image]]]) -> List[torch.Tensor]:

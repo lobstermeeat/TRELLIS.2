@@ -1,6 +1,7 @@
+import os
 from typing import *
 
-BACKEND = 'flash_attn' 
+BACKEND = os.environ.get('ATTN_BACKEND', 'xformers') 
 DEBUG = False
 
 def __from_env():

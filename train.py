@@ -1,4 +1,6 @@
 import os
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy("file_system")
 import sys
 import json
 import glob
